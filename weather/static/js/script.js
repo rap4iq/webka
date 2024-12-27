@@ -1,24 +1,45 @@
-document.getElementById('getWeatherBtn').addEventListener('click', function() {
-    // Получаем значение города и выбранный тип прогноза
-    const city = document.getElementById('city').value;
-    const forecastType = document.getElementById('forecastType').value;
+document.getElementById('city').addEventListener('keypress', function(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        const city = document.getElementById('city').value;
 
-    if (city) {
-        // Скрываем блоки с предыдущими результатами
-        document.getElementById('weatherResult').style.display = 'none';
-        document.getElementById('weatherWeeklyResult').style.display = 'none';
-        document.getElementById('forecastTitle').style.display = 'none';
+        if (city) {
+            // Скрытие блоков с предыдущими результатами
+            document.getElementById('weatherResult').style.display = 'none';
+            document.getElementById('weatherWeeklyResult').style.display = 'none';
+            document.getElementById('forecastTitle').style.display = 'none';
+            document.getElementById('weather-map').style.display = 'block';
 
-        // Отправляем запрос на сервер в зависимости от типа прогноза
-        if (forecastType === 'one_day') {
-            getWeather(city);  // Запрашиваем погоду на один день
-        } else if (forecastType === 'weekly') {
-            getWeatherWeekly(city);  // Запрашиваем прогноз на неделю
+            // Запрашиваем погоду и прогноз
+            getWeather(city);
+            getWeatherWeekly(city);
+
+            // Запрашиваем координаты города
+            getCityCoordinates(city);
+        } else {
+            alert("Please enter a city name!");
         }
-    } else {
-        alert("Please enter a city name!");
     }
 });
+
+function getCityCoordinates(city) {
+    const apiKey = '45f9547cb056a7c417f899ed3b97de30'; // Ваш API-ключ OpenWeatherMap
+    const geocodingUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${apiKey}`;
+
+    fetch(geocodingUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.length > 0) {
+                const { lat, lon } = data[0]; // Получаем широту и долготу
+                // Обновляем центр карты
+                map.setView([lat, lon], 10);
+            } else {
+                alert("City not found. Please check the name and try again.");
+            }
+        })
+        .catch(error => alert("An error occurred while fetching city coordinates: " + error));
+}
+
 
 function getWeather(city) {
     // Отправка GET-запроса на сервер для получения погоды на один день
@@ -27,7 +48,7 @@ function getWeather(city) {
         .then(data => {
             if (data.success) {
                 // Отображаем данные о погоде
-                document.getElementById('weatherResult').style.display = 'block';
+                document.getElementById('weatherResult').style.display = 'flex';
                 document.getElementById('cityName').textContent = data.data.city;
                 document.getElementById('temperature').textContent = data.data.temperature;
                 document.getElementById('description').textContent = data.data.description;
@@ -49,7 +70,7 @@ function getWeatherWeekly(city) {
             if (data.success) {
                 // Отображаем данные о прогнозе на неделю
                 document.getElementById('forecastTitle').style.display = 'block';
-                document.getElementById('weatherWeeklyResult').style.display = 'block';
+                document.getElementById('weatherWeeklyResult').style.display = 'flex';
                 document.getElementById('weatherWeeklyResult').innerHTML = '';
 
                 data.data.forEach(forecast => {
@@ -71,3 +92,89 @@ function getWeatherWeekly(city) {
         })
         .catch(error => alert("An error occurred: " + error));
 }
+
+// Инициализация карты
+var map = L.map('weather-map').setView([55.7558, 37.6173], 10); // Координаты по умолчанию (Москва)
+
+// Фон карты
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+}).addTo(map);
+
+// Добавление слоя температуры
+L.tileLayer('https://{s}.tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=45f9547cb056a7c417f899ed3b97de30', {
+    attribution: '&copy; <a href="https://www.openweathermap.org/copyright">OpenWeatherMap</a>',
+    maxZoom: 19
+}).addTo(map);
+
+
+let currentSlide = 0;
+
+function updateSlider() {
+    const slider = document.getElementById('weatherWeeklyResult');
+    const slides = slider.children;
+    const slideWidth = slides[0].clientWidth; // Get width of the first slide
+    slider.style.transform = `translateX(-${currentSlide * slideWidth}px)`;
+}
+
+function nextSlide() {
+    const slider = document.getElementById('weatherWeeklyResult');
+    const slides = slider.children;
+    if (currentSlide < slides.length - 1) {
+        currentSlide++;
+    } else {
+        currentSlide = 0; 
+    }
+    updateSlider();
+}
+
+function prevSlide() {
+    const slider = document.getElementById('weatherWeeklyResult');
+    const slides = slider.children;
+    if (currentSlide > 0) {
+        currentSlide--;
+    } else {
+        currentSlide = slides.length - 1; 
+    }
+    updateSlider();
+}
+
+document.getElementById('nextButton').addEventListener('click', nextSlide);
+document.getElementById('prevButton').addEventListener('click', prevSlide);
+
+setInterval(nextSlide, 5000);
+
+
+
+
+document.querySelectorAll('.dropdown-content a').forEach(item => {
+    item.addEventListener('click', function (e) {
+      e.preventDefault(); // Отменяет переход по ссылке
+      document.querySelector('.language-btn').textContent = this.textContent;
+    });
+});
+  
+// let currentSlide = 0;
+
+// function updateSlider() {
+//     const slider = document.getElementById('weatherWeeklyResult');
+//     const slides = slider.children;
+//     const slideWidth = slider.clientWidth;
+//     slider.style.transform = `translateX(-${currentSlide * slideWidth}px)`;
+// }
+
+// function nextSlide() {
+//     const slider = document.getElementById('weatherWeeklyResult');
+//     const slides = slider.children;
+//     if (currentSlide < slides.length - 1) {
+//         currentSlide++;
+//     } else {
+//         currentSlide = 0; // Loop back to the first slide
+//     }
+//     updateSlider();
+// }
+
+// // Automatically rotate slides every 2 seconds
+// setInterval(nextSlide, 2000);
+
